@@ -117,6 +117,14 @@
   button:hover { box-shadow: var(--shadow-hover); transform: translateY(-1px); }
   button:active { transform: translateY(0); }
 
+  .executor-filter { display: flex; gap: 4px; }
+  .filter-btn { padding: 5px 11px; font-size: 11.5px; }
+  .filter-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--panel-edge);
+  }
+
   main {
     display: flex;
     gap: 20px;
@@ -248,6 +256,11 @@
     <img src="assets/penter-logo-white.png" alt="PENTER" width="96" height="20">
   </div>
   <div id="meta">
+    <div class="executor-filter" id="executor-filter" role="group" aria-label="Исполнитель">
+      <button class="filter-btn active" data-executor="Все">Все</button>
+      <button class="filter-btn" data-executor="Глеб">Глеб</button>
+      <button class="filter-btn" data-executor="Антон">Антон</button>
+    </div>
     <span id="updated">Загрузка…</span>
     <button id="refresh">Обновить</button>
   </div>
@@ -315,6 +328,7 @@ async function fetchTasks() {
       status: gvizStr(c[6]),
       priority: gvizStr(c[7]),
       deal: gvizStr(c[8]),
+      executor: gvizStr(c[11]),
     };
   }).filter(t => t.id);
 }
@@ -404,6 +418,13 @@ function buildCard(t) {
     meta.appendChild(dealChip);
   }
 
+  if (t.executor) {
+    const executorChip = document.createElement('span');
+    executorChip.className = 'chip';
+    executorChip.textContent = t.executor;
+    meta.appendChild(executorChip);
+  }
+
   card.appendChild(meta);
   return card;
 }
@@ -457,12 +478,22 @@ function render(tasks) {
   });
 }
 
+let allTasks = [];
+let currentExecutor = 'Все';
+
+function renderFiltered() {
+  const filtered = currentExecutor === 'Все'
+    ? allTasks
+    : allTasks.filter(t => t.executor === currentExecutor);
+  render(filtered);
+}
+
 async function load() {
   const errorBox = document.getElementById('error');
   const updated = document.getElementById('updated');
   try {
-    const tasks = await fetchTasks();
-    render(tasks);
+    allTasks = await fetchTasks();
+    renderFiltered();
     errorBox.style.display = 'none';
     updated.textContent = 'Обновлено в ' +
       new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
@@ -474,6 +505,13 @@ async function load() {
 }
 
 document.getElementById('refresh').addEventListener('click', load);
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    currentExecutor = btn.dataset.executor;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b === btn));
+    renderFiltered();
+  });
+});
 load();
 setInterval(load, REFRESH_MS);
 </script>
