@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Канбан задач</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f4f5f7;
+    --col-bg: #ebecf0;
+    --card-bg: #ffffff;
+    --text: #172b4d;
+    --text-muted: #5e6c84;
+    --border: #dfe1e6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101418;
+      --col-bg: #1a1f26;
+      --card-bg: #232a33;
+      --text: #e6e9ee;
+      --text-muted: #9aa5b1;
+      --border: #333c47;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  header h1 { font-size: 20px; margin: 0; }
+  #meta { font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 12px; }
+  button {
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button:hover { opacity: 0.8; }
+  main {
+    display: flex;
+    gap: 16px;
+    padding: 0 24px 24px;
+    overflow-x: auto;
+  }
+  .column {
+    background: var(--col-bg);
+    border-radius: 10px;
+    padding: 12px;
+    width: 320px;
+    min-width: 320px;
+    flex-shrink: 0;
+  }
+  .column-header {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 4px;
+  }
+  .count {
+    background: var(--border);
+    border-radius: 10px;
+    padding: 1px 8px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .card {
+    background: var(--card-bg);
+    border-left: 4px solid #999;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  }
+  .card-title {
+    font-size: 14px;
+    line-height: 1.35;
+    margin-bottom: 6px;
+    white-space: pre-wrap;
+  }
+  .card-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--col-bg);
+    border: 1px solid var(--border);
+  }
+  .empty {
+    color: var(--text-muted);
+    font-size: 13px;
+    padding: 8px 4px;
+  }
+  #error {
+    margin: 0 24px 16px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: #fde2e1;
+    color: #611a15;
+    font-size: 13px;
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Канбан задач</h1>
+  <div id="meta">
+    <span id="updated">Загрузка…</span>
+    <button id="refresh">Обновить</button>
+  </div>
+</header>
+
+<div id="error"></div>
+
+<main id="board"></main>
+
+<script>
+const SHEET_ID = '1Jfkgr0ilZXzIBeyeFl8u0_z5JTZDWU42sKMlcVwqjf8';
+const SHEET_NAME = 'База';
+const GVIZ_URL = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID +
+  '/gviz/tq?tqx=out:json&sheet=' + encodeURIComponent(SHEET_NAME) + '&_=' + Date.now();
+
+const STATUS_COLUMNS = ['Не начато', 'В работе', 'Готово'];
+
+const TYPE_COLORS = {
+  'Поиск товара': '#7986cb',
+  'Закупка': '#039be5',
+  'Дизайн': '#3f51b5',
+  'Сертификация': '#33b679',
+  'Контракт': '#0b8043',
+  'Производство': '#f6bf26',
+  'Отгрузка': '#f4511e',
+  'Прочее': '#616161',
+};
+const OVERDUE_COLOR = '#d50000';
+const REFRESH_MS = 5 * 60 * 1000;
+
+function parseGviz(text) {
+  const start = text.indexOf('(');
+  const end = text.lastIndexOf(')');
+  return JSON.parse(text.substring(start + 1, end));
+}
+
+function gvizDate(cell) {
+  if (!cell || !cell.v) return null;
+  const m = /Date\((\d+),(\d+),(\d+)\)/.exec(cell.v);
+  if (!m) return null;
+  return new Date(+m[1], +m[2], +m[3]);
+}
+
+function gvizStr(cell) {
+  return cell && cell.v != null ? String(cell.v) : '';
+}
+
+async function fetchTasks() {
+  const res = await fetch(GVIZ_URL, { cache: 'no-store' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const json = parseGviz(await res.text());
+  const rows = json.table.rows || [];
+  return rows.map(row => {
+    const c = row.c || [];
+    return {
+      id: gvizStr(c[0]),
+      text: gvizStr(c[2]),
+      type: gvizStr(c[3]),
+      startDate: gvizDate(c[4]),
+      endDate: gvizDate(c[5]),
+      status: gvizStr(c[6]),
+      priority: gvizStr(c[7]),
+      deal: gvizStr(c[8]),
+    };
+  }).filter(t => t.id);
+}
+
+function todayMidnight() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function daysUntil(date) {
+  if (!date) return null;
+  const ms = date.getTime() - todayMidnight().getTime();
+  return Math.round(ms / 86400000);
+}
+
+function isOverdue(t) {
+  if (t.status === 'Готово' || !t.endDate) return false;
+  return daysUntil(t.endDate) < 0;
+}
+
+function isDueSoon(t) {
+  if (t.status === 'Готово' || !t.endDate) return false;
+  const d = daysUntil(t.endDate);
+  return d === 0 || d === 1;
+}
+
+function formatDate(date) {
+  if (!date) return '—';
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  return dd + '.' + mm + '.' + date.getFullYear();
+}
+
+function buildCard(t) {
+  const overdue = isOverdue(t);
+  const dueSoon = isDueSoon(t);
+  const warn = overdue || dueSoon;
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.style.borderLeftColor = warn ? OVERDUE_COLOR : (TYPE_COLORS[t.type] || '#999');
+
+  const title = document.createElement('div');
+  title.className = 'card-title';
+  let prefix = '';
+  if (warn) prefix += '⚠️';
+  if (t.priority === 'Высокий') prefix += '❗';
+  title.textContent = (prefix ? prefix + ' ' : '') + t.text;
+  card.appendChild(title);
+
+  const meta = document.createElement('div');
+  meta.className = 'card-meta';
+
+  if (t.type) {
+    const typeBadge = document.createElement('span');
+    typeBadge.className = 'badge';
+    typeBadge.textContent = t.type;
+    meta.appendChild(typeBadge);
+  }
+
+  const dateBadge = document.createElement('span');
+  dateBadge.className = 'badge';
+  dateBadge.textContent = 'до ' + formatDate(t.endDate);
+  meta.appendChild(dateBadge);
+
+  if (t.deal) {
+    const dealBadge = document.createElement('span');
+    dealBadge.className = 'badge';
+    dealBadge.textContent = t.deal;
+    meta.appendChild(dealBadge);
+  }
+
+  card.appendChild(meta);
+  return card;
+}
+
+function render(tasks) {
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+
+  STATUS_COLUMNS.forEach(status => {
+    const col = document.createElement('div');
+    col.className = 'column';
+
+    const items = tasks
+      .filter(t => t.status === status)
+      .sort((a, b) => {
+        if (!a.endDate) return 1;
+        if (!b.endDate) return -1;
+        return a.endDate - b.endDate;
+      });
+
+    const header = document.createElement('div');
+    header.className = 'column-header';
+    const label = document.createElement('span');
+    label.textContent = status;
+    const count = document.createElement('span');
+    count.className = 'count';
+    count.textContent = items.length;
+    header.appendChild(label);
+    header.appendChild(count);
+    col.appendChild(header);
+
+    if (items.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.textContent = 'Пусто';
+      col.appendChild(empty);
+    } else {
+      items.forEach(t => col.appendChild(buildCard(t)));
+    }
+
+    board.appendChild(col);
+  });
+}
+
+async function load() {
+  const errorBox = document.getElementById('error');
+  const updated = document.getElementById('updated');
+  try {
+    const tasks = await fetchTasks();
+    render(tasks);
+    errorBox.style.display = 'none';
+    updated.textContent = 'Обновлено в ' +
+      new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  } catch (e) {
+    errorBox.textContent = 'Не удалось загрузить данные: ' + e.message;
+    errorBox.style.display = 'block';
+    updated.textContent = 'Ошибка загрузки';
+  }
+}
+
+document.getElementById('refresh').addEventListener('click', load);
+load();
+setInterval(load, REFRESH_MS);
+</script>
+
+</body>
+</html>
