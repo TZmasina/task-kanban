@@ -4,131 +4,229 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Канбан задач</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
     color-scheme: light dark;
-    --bg: #f4f5f7;
-    --col-bg: #ebecf0;
-    --card-bg: #ffffff;
-    --text: #172b4d;
-    --text-muted: #5e6c84;
-    --border: #dfe1e6;
+    --bg-0: #eef0f2;
+    --bg-1: #e2e5e9;
+    --panel: #f7f8f9;
+    --panel-edge: #ffffff;
+    --card: #ffffff;
+    --card-edge: rgba(255,255,255,0.9);
+    --text: #21262c;
+    --text-muted: #6b7480;
+    --text-faint: #9aa2ab;
+    --border: rgba(20,24,28,0.08);
+    --border-strong: rgba(20,24,28,0.14);
+    --shadow: 0 1px 2px rgba(20,24,28,0.04), 0 6px 20px rgba(20,24,28,0.05);
+    --shadow-hover: 0 2px 4px rgba(20,24,28,0.06), 0 12px 28px rgba(20,24,28,0.08);
+    --accent: #7b8794;
+    --danger: #c0362c;
+    --danger-bg: rgba(192,54,44,0.08);
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #101418;
-      --col-bg: #1a1f26;
-      --card-bg: #232a33;
-      --text: #e6e9ee;
-      --text-muted: #9aa5b1;
-      --border: #333c47;
+      --bg-0: #0c0d0f;
+      --bg-1: #17191c;
+      --panel: #1a1c1f;
+      --panel-edge: #24272b;
+      --card: #1f2225;
+      --card-edge: rgba(255,255,255,0.06);
+      --text: #e7e9ec;
+      --text-muted: #9aa2ab;
+      --text-faint: #656c74;
+      --border: rgba(255,255,255,0.07);
+      --border-strong: rgba(255,255,255,0.13);
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+      --shadow-hover: 0 2px 6px rgba(0,0,0,0.35), 0 16px 32px rgba(0,0,0,0.4);
+      --accent: #9aa2ab;
+      --danger: #e5695f;
+      --danger-bg: rgba(229,105,95,0.1);
     }
   }
   * { box-sizing: border-box; }
+  html, body { height: 100%; }
   body {
     margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: var(--bg);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     color: var(--text);
+    background:
+      radial-gradient(1100px 500px at 15% -10%, var(--bg-1), transparent),
+      linear-gradient(180deg, var(--bg-0), var(--bg-1));
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
   }
   header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 24px;
+    padding: 20px 32px;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 12px;
+    background: color-mix(in srgb, var(--bg-0) 72%, transparent);
+    backdrop-filter: blur(14px) saturate(1.4);
+    -webkit-backdrop-filter: blur(14px) saturate(1.4);
+    border-bottom: 1px solid var(--border);
   }
-  header h1 { font-size: 20px; margin: 0; }
-  #meta { font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 12px; }
+  .title-group { display: flex; align-items: center; gap: 10px; }
+  .title-dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: linear-gradient(145deg, #c4cad1, #8b93a0);
+    box-shadow: 0 0 0 3px var(--border), inset 0 1px 1px rgba(255,255,255,0.6);
+  }
+  header h1 {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  #meta { font-size: 12.5px; color: var(--text-muted); display: flex; align-items: center; gap: 14px; }
   button {
-    border: 1px solid var(--border);
-    background: var(--card-bg);
+    border: 1px solid var(--border-strong);
+    background: linear-gradient(180deg, var(--panel-edge), var(--panel));
     color: var(--text);
-    border-radius: 6px;
-    padding: 6px 12px;
+    border-radius: 8px;
+    padding: 7px 14px;
     cursor: pointer;
-    font-size: 13px;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+    box-shadow: var(--shadow);
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
   }
-  button:hover { opacity: 0.8; }
+  button:hover { box-shadow: var(--shadow-hover); transform: translateY(-1px); }
+  button:active { transform: translateY(0); }
+
   main {
     display: flex;
-    gap: 16px;
-    padding: 0 24px 24px;
+    gap: 20px;
+    padding: 24px 32px 40px;
     overflow-x: auto;
+    align-items: flex-start;
   }
   .column {
-    background: var(--col-bg);
-    border-radius: 10px;
-    padding: 12px;
-    width: 320px;
-    min-width: 320px;
+    background: linear-gradient(180deg, var(--panel-edge), var(--panel));
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    width: 330px;
+    min-width: 330px;
     flex-shrink: 0;
+    box-shadow: var(--shadow);
   }
   .column-header {
     font-weight: 600;
-    font-size: 14px;
-    margin-bottom: 10px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 14px;
     display: flex;
+    align-items: center;
     justify-content: space-between;
     padding: 0 4px;
   }
+  .column-header .label { display: flex; align-items: center; gap: 8px; }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; }
+  .status-dot.not-started { background: var(--text-faint); }
+  .status-dot.in-progress { background: #7b8fa8; box-shadow: 0 0 8px rgba(123,143,168,0.6); }
+  .status-dot.done { background: #4f9d6e; box-shadow: 0 0 8px rgba(79,157,110,0.5); }
   .count {
     background: var(--border);
-    border-radius: 10px;
-    padding: 1px 8px;
-    font-size: 12px;
-    font-weight: 500;
+    color: var(--text-muted);
+    border-radius: 20px;
+    padding: 2px 9px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
   }
   .card {
-    background: var(--card-bg);
-    border-left: 4px solid #999;
-    border-radius: 6px;
-    padding: 10px 12px;
-    margin-bottom: 8px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+    background: var(--card);
+    border: 1px solid var(--card-edge);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow);
+    transition: box-shadow 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+  }
+  .card:hover {
+    box-shadow: var(--shadow-hover);
+    transform: translateY(-2px);
+    border-color: var(--border-strong);
+  }
+  .card.warn {
+    border-color: color-mix(in srgb, var(--danger) 35%, var(--card-edge));
+    background: linear-gradient(180deg, var(--danger-bg), var(--card) 55%);
   }
   .card-title {
-    font-size: 14px;
-    line-height: 1.35;
-    margin-bottom: 6px;
+    font-size: 13.5px;
+    font-weight: 500;
+    line-height: 1.42;
+    color: var(--text);
+    margin-bottom: 10px;
     white-space: pre-wrap;
   }
+  .icon { margin-right: 3px; }
   .card-meta {
-    font-size: 12px;
+    font-size: 11.5px;
     color: var(--text-muted);
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 6px;
   }
-  .badge {
-    display: inline-block;
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     font-size: 11px;
-    padding: 1px 6px;
-    border-radius: 4px;
-    background: var(--col-bg);
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: var(--bg-1);
     border: 1px solid var(--border);
-  }
-  .empty {
     color: var(--text-muted);
-    font-size: 13px;
-    padding: 8px 4px;
+    white-space: nowrap;
+  }
+  .chip-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .chip.date-warn { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 30%, var(--border)); }
+  .empty {
+    color: var(--text-faint);
+    font-size: 12.5px;
+    padding: 10px 6px;
+    text-align: center;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
   }
   #error {
-    margin: 0 24px 16px;
-    padding: 10px 14px;
-    border-radius: 8px;
-    background: #fde2e1;
-    color: #611a15;
+    margin: 0 32px 0;
+    padding: 10px 16px;
+    border-radius: 10px;
+    background: var(--danger-bg);
+    color: var(--danger);
     font-size: 13px;
+    border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent);
     display: none;
   }
+  ::-webkit-scrollbar { height: 10px; width: 10px; }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>Канбан задач</h1>
+  <div class="title-group">
+    <span class="title-dot"></span>
+    <h1>Канбан задач</h1>
+  </div>
   <div id="meta">
     <span id="updated">Загрузка…</span>
     <button id="refresh">Обновить</button>
@@ -145,19 +243,22 @@ const SHEET_NAME = 'База';
 const GVIZ_URL = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID +
   '/gviz/tq?tqx=out:json&sheet=' + encodeURIComponent(SHEET_NAME) + '&_=' + Date.now();
 
-const STATUS_COLUMNS = ['Не начато', 'В работе', 'Готово'];
+const STATUS_COLUMNS = [
+  { name: 'Не начато', dot: 'not-started' },
+  { name: 'В работе', dot: 'in-progress' },
+  { name: 'Готово', dot: 'done' },
+];
 
 const TYPE_COLORS = {
-  'Поиск товара': '#7986cb',
-  'Закупка': '#039be5',
-  'Дизайн': '#3f51b5',
-  'Сертификация': '#33b679',
-  'Контракт': '#0b8043',
-  'Производство': '#f6bf26',
-  'Отгрузка': '#f4511e',
-  'Прочее': '#616161',
+  'Поиск товара': '#8a90e0',
+  'Закупка': '#4aa3d1',
+  'Дизайн': '#6b74c9',
+  'Сертификация': '#4fa383',
+  'Контракт': '#4f9d6e',
+  'Производство': '#c9a23f',
+  'Отгрузка': '#c9743f',
+  'Прочее': '#8b93a0',
 };
-const OVERDUE_COLOR = '#d50000';
 const REFRESH_MS = 5 * 60 * 1000;
 
 function parseGviz(text) {
@@ -233,37 +334,49 @@ function buildCard(t) {
   const warn = overdue || dueSoon;
 
   const card = document.createElement('div');
-  card.className = 'card';
-  card.style.borderLeftColor = warn ? OVERDUE_COLOR : (TYPE_COLORS[t.type] || '#999');
+  card.className = 'card' + (warn ? ' warn' : '');
 
   const title = document.createElement('div');
   title.className = 'card-title';
-  let prefix = '';
-  if (warn) prefix += '⚠️';
-  if (t.priority === 'Высокий') prefix += '❗';
-  title.textContent = (prefix ? prefix + ' ' : '') + t.text;
+  if (warn) {
+    const icon = document.createElement('span');
+    icon.className = 'icon';
+    icon.textContent = '⚠️';
+    title.appendChild(icon);
+  }
+  if (t.priority === 'Высокий') {
+    const icon = document.createElement('span');
+    icon.className = 'icon';
+    icon.textContent = '❗';
+    title.appendChild(icon);
+  }
+  title.appendChild(document.createTextNode(t.text));
   card.appendChild(title);
 
   const meta = document.createElement('div');
   meta.className = 'card-meta';
 
   if (t.type) {
-    const typeBadge = document.createElement('span');
-    typeBadge.className = 'badge';
-    typeBadge.textContent = t.type;
-    meta.appendChild(typeBadge);
+    const typeChip = document.createElement('span');
+    typeChip.className = 'chip';
+    const dot = document.createElement('span');
+    dot.className = 'chip-dot';
+    dot.style.background = TYPE_COLORS[t.type] || '#8b93a0';
+    typeChip.appendChild(dot);
+    typeChip.appendChild(document.createTextNode(t.type));
+    meta.appendChild(typeChip);
   }
 
-  const dateBadge = document.createElement('span');
-  dateBadge.className = 'badge';
-  dateBadge.textContent = 'до ' + formatDate(t.endDate);
-  meta.appendChild(dateBadge);
+  const dateChip = document.createElement('span');
+  dateChip.className = 'chip' + (warn ? ' date-warn' : '');
+  dateChip.textContent = 'до ' + formatDate(t.endDate);
+  meta.appendChild(dateChip);
 
   if (t.deal) {
-    const dealBadge = document.createElement('span');
-    dealBadge.className = 'badge';
-    dealBadge.textContent = t.deal;
-    meta.appendChild(dealBadge);
+    const dealChip = document.createElement('span');
+    dealChip.className = 'chip';
+    dealChip.textContent = t.deal;
+    meta.appendChild(dealChip);
   }
 
   card.appendChild(meta);
@@ -274,12 +387,12 @@ function render(tasks) {
   const board = document.getElementById('board');
   board.innerHTML = '';
 
-  STATUS_COLUMNS.forEach(status => {
+  STATUS_COLUMNS.forEach(({ name, dot }) => {
     const col = document.createElement('div');
     col.className = 'column';
 
     const items = tasks
-      .filter(t => t.status === status)
+      .filter(t => t.status === name)
       .sort((a, b) => {
         if (!a.endDate) return 1;
         if (!b.endDate) return -1;
@@ -288,12 +401,21 @@ function render(tasks) {
 
     const header = document.createElement('div');
     header.className = 'column-header';
+
+    const labelWrap = document.createElement('span');
+    labelWrap.className = 'label';
+    const statusDot = document.createElement('span');
+    statusDot.className = 'status-dot ' + dot;
     const label = document.createElement('span');
-    label.textContent = status;
+    label.textContent = name;
+    labelWrap.appendChild(statusDot);
+    labelWrap.appendChild(label);
+
     const count = document.createElement('span');
     count.className = 'count';
     count.textContent = items.length;
-    header.appendChild(label);
+
+    header.appendChild(labelWrap);
     header.appendChild(count);
     col.appendChild(header);
 
