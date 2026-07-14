@@ -151,6 +151,7 @@
   .status-dot.not-started { background: var(--text-faint); }
   .status-dot.in-progress { background: #7b8fa8; box-shadow: 0 0 8px rgba(123,143,168,0.6); }
   .status-dot.done { background: #4f9d6e; box-shadow: 0 0 8px rgba(79,157,110,0.5); }
+  .status-dot.archived { background: #8b93a0; }
   .count {
     background: var(--border);
     color: var(--text-muted);
@@ -179,6 +180,8 @@
     border-color: color-mix(in srgb, var(--danger) 35%, var(--card-edge));
     background: linear-gradient(180deg, var(--danger-bg), var(--card) 55%);
   }
+  .card.archived { opacity: 0.65; }
+  .card.archived:hover { opacity: 0.9; }
   .card-title {
     font-size: 13.5px;
     font-weight: 500;
@@ -264,6 +267,7 @@ const STATUS_COLUMNS = [
   { name: 'Не начато', dot: 'not-started' },
   { name: 'В работе', dot: 'in-progress' },
   { name: 'Готово', dot: 'done' },
+  { name: 'Архив', dot: 'archived' },
 ];
 
 const TYPE_COLORS = {
@@ -327,13 +331,17 @@ function daysUntil(date) {
   return Math.round(ms / 86400000);
 }
 
+function isArchived(t) {
+  return t.status === 'Архив';
+}
+
 function isOverdue(t) {
-  if (t.status === 'Готово' || !t.endDate) return false;
+  if (t.status === 'Готово' || isArchived(t) || !t.endDate) return false;
   return daysUntil(t.endDate) < 0;
 }
 
 function isDueSoon(t) {
-  if (t.status === 'Готово' || !t.endDate) return false;
+  if (t.status === 'Готово' || isArchived(t) || !t.endDate) return false;
   const d = daysUntil(t.endDate);
   return d === 0 || d === 1;
 }
@@ -351,7 +359,7 @@ function buildCard(t) {
   const warn = overdue || dueSoon;
 
   const card = document.createElement('div');
-  card.className = 'card' + (warn ? ' warn' : '');
+  card.className = 'card' + (warn ? ' warn' : '') + (isArchived(t) ? ' archived' : '');
 
   const title = document.createElement('div');
   title.className = 'card-title';
