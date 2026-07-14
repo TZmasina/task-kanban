@@ -117,13 +117,25 @@
   button:hover { box-shadow: var(--shadow-hover); transform: translateY(-1px); }
   button:active { transform: translateY(0); }
 
-  .executor-filter { display: flex; gap: 4px; }
-  .filter-btn { padding: 5px 11px; font-size: 11.5px; }
-  .filter-btn.active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--panel-edge);
+  #executor-select {
+    border: 1px solid var(--border-strong);
+    background: linear-gradient(180deg, var(--panel-edge), var(--panel));
+    color: var(--text);
+    border-radius: 8px;
+    padding: 7px 30px 7px 12px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+    box-shadow: var(--shadow);
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236b7480' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),
+      linear-gradient(180deg, var(--panel-edge), var(--panel));
+    background-repeat: no-repeat;
+    background-position: right 11px center, 0 0;
   }
+  #executor-select:hover { box-shadow: var(--shadow-hover); }
 
   main {
     display: flex;
@@ -256,11 +268,11 @@
     <img src="assets/penter-logo-white.png" alt="PENTER" width="96" height="20">
   </div>
   <div id="meta">
-    <div class="executor-filter" id="executor-filter" role="group" aria-label="Исполнитель">
-      <button class="filter-btn active" data-executor="Все">Все</button>
-      <button class="filter-btn" data-executor="Глеб">Глеб</button>
-      <button class="filter-btn" data-executor="Антон">Антон</button>
-    </div>
+    <select id="executor-select" aria-label="Исполнитель">
+      <option value="Все">Все</option>
+      <option value="Глеб">Глеб</option>
+      <option value="Антон">Антон</option>
+    </select>
     <span id="updated">Загрузка…</span>
     <button id="refresh">Обновить</button>
   </div>
@@ -505,12 +517,9 @@ async function load() {
 }
 
 document.getElementById('refresh').addEventListener('click', load);
-document.querySelectorAll('.filter-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    currentExecutor = btn.dataset.executor;
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b === btn));
-    renderFiltered();
-  });
+document.getElementById('executor-select').addEventListener('change', (e) => {
+  currentExecutor = e.target.value;
+  renderFiltered();
 });
 load();
 setInterval(load, REFRESH_MS);
